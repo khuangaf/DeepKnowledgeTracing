@@ -29,12 +29,13 @@ tf.flags.DEFINE_integer("hidden_layer_num", 1, "The number of hidden layers (Int
 tf.flags.DEFINE_integer("hidden_size", 200, "The number of hidden nodes (Integer)")
 tf.flags.DEFINE_integer("evaluation_interval", 5, "Evaluate and print results every x epochs")
 tf.flags.DEFINE_integer("batch_size", 32, "Batch size for training.")
-tf.flags.DEFINE_integer("epochs", 150, "Number of epochs to train for.")
+tf.flags.DEFINE_integer("epochs", 50, "Number of epochs to train for.")
 tf.flags.DEFINE_boolean("allow_soft_placement", True, "Allow device soft device placement")
 tf.flags.DEFINE_boolean("log_device_placement", False, "Log placement of ops on devices")
-tf.flags.DEFINE_string("train_data_path", 'data/trainTemp.csv', "Path to the training dataset")
-tf.flags.DEFINE_string("test_data_path", 'data/testTemp.csv', "Path to the testing dataset")
+tf.flags.DEFINE_string("train_data_path", 'data/0910_a_train.csv', "Path to the training dataset")
+tf.flags.DEFINE_string("test_data_path", 'data/0910_a_test.csv', "Path to the testing dataset")
 
+log_file_path = '1layereda.txt'
 FLAGS = tf.flags.FLAGS
 FLAGS._parse_flags()
 print("\nParameters:")
@@ -169,7 +170,7 @@ class HyperParamsConfig(object):
     max_max_epoch = FLAGS.epochs
     keep_prob = FLAGS.keep_prob
     num_skills = 0
-    state_size = [200,200,200]
+    state_size = [200]
 
 def run_epoch(session, m, students, eval_op, verbose=False):
     """Runs the model on the given data."""
@@ -326,16 +327,17 @@ def main(unused_args):
             for i in range(config.max_max_epoch):
                 rmse, auc, r2 = run_epoch(session, m, train_students, train_op, verbose=True)
                 print("Epoch: %d Train Metrics:\n rmse: %.3f \t auc: %.3f \t r2: %.3f \n" % (i + 1, rmse, auc, r2))
-
+                with open(log_file_path, "a+") as f:
+                    f.write("Epoch: %d Train Metrics:\n rmse: %.3f \t auc: %.3f \t r2: %.3f \n" % (i + 1, rmse, auc, r2))
                 if((i+1) % FLAGS.evaluation_interval == 0):
                     print "Save variables to disk"
-                    # save_path = saver.save(session, model_name)
+                    # save_path = saver.save(session, model_name)#
                     print("*"*10)
                     print("Start to test model....")
                     rmse, auc, r2 = run_epoch(session, mtest, test_students, tf.no_op())
                     print("Epoch: %d Test Metrics:\n rmse: %.3f \t auc: %.3f \t r2: %.3f" % (i+1, rmse, auc, r2))
-                    with open(result_file_path, "a+") as f:
-                        f.write("Epoch: %d Test Metrics:\n rmse: %.3f \t auc: %.3f \t r2: %.3f" % ((i+1)/2, rmse, auc, r2))
+                    with open(log_file_path, "a+") as f:
+                        f.write("Epoch: %d Test Metrics:\n rmse: %.3f \t auc: %.3f \t r2: %.3f" % ((i+1) , rmse, auc, r2))
                         f.write("\n")
 
                         print("*"*10)

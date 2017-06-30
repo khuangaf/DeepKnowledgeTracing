@@ -1,0 +1,183 @@
+
+Parameters:
+ALLOW_SOFT_PLACEMENT=True
+BATCH_SIZE=32
+EPOCHS=150
+EPSILON=0.1
+EVALUATION_INTERVAL=5
+HIDDEN_LAYER_NUM=1
+HIDDEN_SIZE=200
+KEEP_PROB=0.6
+L2_LAMBDA=0.3
+LEARNING_RATE=0.1
+LOG_DEVICE_PLACEMENT=False
+MAX_GRAD_NORM=20.0
+TEST_DATA_PATH=data/0910_b_test.csv
+TRAIN_DATA_PATH=data/0910_b_train.csv
+
+the number of rows is 10116
+The number of students is  3134
+Finish reading data
+the number of rows is 2532
+The number of students is  786
+Finish reading data
+Writing hyperparameters into file
+Epoch: 1 Train Metrics:
+ rmse: 0.445 	 auc: 0.697 	 r2: 0.122 
+
+Epoch: 2 Train Metrics:
+ rmse: 0.413 	 auc: 0.783 	 r2: 0.246 
+
+Epoch: 3 Train Metrics:
+ rmse: 0.406 	 auc: 0.798 	 r2: 0.270 
+
+Epoch: 4 Train Metrics:
+ rmse: 0.401 	 auc: 0.807 	 r2: 0.288 
+
+Epoch: 5 Train Metrics:
+ rmse: 0.398 	 auc: 0.813 	 r2: 0.299 
+
+Save variables to disk
+**********
+Start to test model....
+Epoch: 5 Test Metrics:
+ rmse: 0.396 	 auc: 0.815 	 r2: 0.304
+**********
+Epoch: 6 Train Metrics:
+ rmse: 0.395 	 auc: 0.819 	 r2: 0.310 
+
+Epoch: 7 Train Metrics:
+ rmse: 0.393 	 auc: 0.824 	 r2: 0.318 
+
+Epoch: 8 Train Metrics:
+ rmse: 0.391 	 auc: 0.827 	 r2: 0.323 
+
+Epoch: 9 Train Metrics:
+ rmse: 0.390 	 auc: 0.830 	 r2: 0.328 
+
+Epoch: 10 Train Metrics:
+ rmse: 0.388 	 auc: 0.833 	 r2: 0.334 
+
+Save variables to disk
+**********
+Start to test model....
+Epoch: 10 Test Metrics:
+ rmse: 0.396 	 auc: 0.814 	 r2: 0.301
+**********
+Epoch: 11 Train Metrics:
+ rmse: 0.387 	 auc: 0.835 	 r2: 0.338 
+
+Epoch: 12 Train Metrics:
+ rmse: 0.386 	 auc: 0.837 	 r2: 0.341 
+
+Epoch: 13 Train Metrics:
+ rmse: 0.385 	 auc: 0.839 	 r2: 0.344 
+
+Epoch: 14 Train Metrics:
+ rmse: 0.385 	 auc: 0.839 	 r2: 0.345 
+
+Epoch: 15 Train Metrics:
+ rmse: 0.384 	 auc: 0.841 	 r2: 0.348 
+
+Save variables to disk
+**********
+Start to test model....
+Epoch: 15 Test Metrics:
+ rmse: 0.398 	 auc: 0.812 	 r2: 0.294
+**********
+Epoch: 16 Train Metrics:
+ rmse: 0.383 	 auc: 0.842 	 r2: 0.350 
+
+Epoch: 17 Train Metrics:
+ rmse: 0.383 	 auc: 0.843 	 r2: 0.352 
+
+Epoch: 18 Train Metrics:
+ rmse: 0.382 	 auc: 0.844 	 r2: 0.353 
+
+Epoch: 19 Train Metrics:
+ rmse: 0.381 	 auc: 0.845 	 r2: 0.356 
+
+Epoch: 20 Train Metrics:
+ rmse: 0.381 	 auc: 0.846 	 r2: 0.357 
+
+Save variables to disk
+**********
+Start to test model....
+Epoch: 20 Test Metrics:
+ rmse: 0.400 	 auc: 0.810 	 r2: 0.289
+**********
+Epoch: 21 Train Metrics:
+ rmse: 0.381 	 auc: 0.845 	 r2: 0.356 
+
+Epoch: 22 Train Metrics:
+ rmse: 0.383 	 auc: 0.843 	 r2: 0.351 
+
+Epoch: 23 Train Metrics:
+ rmse: 0.383 	 auc: 0.843 	 r2: 0.351 
+
+Epoch: 24 Train Metrics:
+ rmse: 0.380 	 auc: 0.848 	 r2: 0.360 
+
+Epoch: 25 Train Metrics:
+ rmse: 0.379 	 auc: 0.850 	 r2: 0.364 
+
+Save variables to disk
+**********
+Start to test model....
+Epoch: 25 Test Metrics:
+ rmse: 0.402 	 auc: 0.807 	 r2: 0.282
+**********
+Epoch: 26 Train Metrics:
+ rmse: 0.379 	 auc: 0.850 	 r2: 0.365 
+
+Epoch: 27 Train Metrics:
+ rmse: 0.380 	 auc: 0.848 	 r2: 0.362 
+
+Epoch: 28 Train Metrics:
+ rmse: 0.379 	 auc: 0.849 	 r2: 0.363 
+
+Epoch: 29 Train Metrics:
+ rmse: 0.378 	 auc: 0.851 	 r2: 0.366 
+
+Epoch: 30 Train Metrics:
+ rmse: 0.378 	 auc: 0.851 	 r2: 0.367 
+
+Save variables to disk
+**********
+Start to test model....
+Epoch: 30 Test Metrics:
+ rmse: 0.402 	 auc: 0.808 	 r2: 0.280
+**********
+Epoch: 31 Train Metrics:
+ rmse: 0.377 	 auc: 0.853 	 r2: 0.371 
+
+Epoch: 32 Train Metrics:
+ rmse: 0.375 	 auc: 0.856 	 r2: 0.377 
+
+Epoch: 33 Train Metrics:
+ rmse: 0.375 	 auc: 0.856 	 r2: 0.376 
+
+Epoch: 34 Train Metrics:
+ rmse: 0.376 	 auc: 0.855 	 r2: 0.375 
+
+Epoch: 35 Train Metrics:
+ rmse: 0.374 	 auc: 0.858 	 r2: 0.381 
+
+Save variables to disk
+**********
+Start to test model....
+Epoch: 35 Test Metrics:
+ rmse: 0.403 	 auc: 0.805 	 r2: 0.278
+**********
+Epoch: 36 Train Metrics:
+ rmse: 0.375 	 auc: 0.857 	 r2: 0.378 
+
+Epoch: 37 Train Metrics:
+ rmse: 0.374 	 auc: 0.858 	 r2: 0.381 
+
+Epoch: 38 Train Metrics:
+ rmse: 0.374 	 auc: 0.858 	 r2: 0.381 
+
+Epoch: 39 Train Metrics:
+ rmse: 0.373 	 auc: 0.860 	 r2: 0.384 
+
