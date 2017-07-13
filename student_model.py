@@ -32,20 +32,30 @@ tf.flags.DEFINE_integer("batch_size", 32, "Batch size for training.")
 tf.flags.DEFINE_integer("epochs", 30, "Number of epochs to train for.")
 tf.flags.DEFINE_boolean("allow_soft_placement", True, "Allow device soft device placement")
 tf.flags.DEFINE_boolean("log_device_placement", False, "Log placement of ops on devices")
-tf.flags.DEFINE_string("train_data_path", 'data/0910_b_train.csv', "Path to the training dataset")
-tf.flags.DEFINE_string("test_data_path", 'data/0910_b_test.csv', "Path to the testing dataset")
+tf.flags.DEFINE_string("train_data_path", 'data/kdd_train_0506_alg_modified.csv', "Path to the training dataset")
+tf.flags.DEFINE_string("test_data_path", 'data/kdd_test_0506_alg_modified.csv', "Path to the testing dataset")
+
+gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=    0.7)
+
 
 currentOutputMatrix = []
 cumulativeOutputMatrix = []
-log_file_path = '1layeredb.txt'
-hidden_state_path = 'hidden_state.csv'
+# log_file_path = '1layereda_slided.txt'
+# hidden_state_path = 'hidden_stateb2.npy'
 FLAGS = tf.flags.FLAGS
 FLAGS._parse_flags()
+log_file_path = FLAGS.train_data_path[5:-4] + '.txt'
+hidden_state_path =FLAGS.train_data_path[5:-4] + str(FLAGS.hidden_layer_num) + '.npy'
+
+
+
 print("\nParameters:")
 for attr, value in sorted(FLAGS.__flags.items()):
     print("{}={}".format(attr.upper(), value))
 print("")
 
+print log_file_path
+print hidden_state_path
 def add_gradient_noise(t, stddev=1e-3, name=None):
     """
     Adds gradient noise as described in http://arxiv.org/abs/1511.06807 [2].
@@ -233,7 +243,11 @@ def run_epoch(session, m, students, eval_op, verbose=False):
             m.input_data: x, m.target_id: target_id,
             m.target_correctness: target_correctness})
         #h: [batch_size, num_unit]
+
         h = final_state[0][1]
+        for i in range(len(final_state)):
+            if i == 0: continue
+            h = np.concatenate((h,final_state[i][1]), axis=1)
         index += m.batch_size
         # if first batch of data
         if len(currentOutputMatrix) < 1:
@@ -355,7 +369,8 @@ def main(unused_args):
 
     with tf.Graph().as_default():
         session_conf = tf.ConfigProto(allow_soft_placement=FLAGS.allow_soft_placement,
-                                      log_device_placement=FLAGS.log_device_placement)
+                                      log_device_placement=FLAGS.log_device_placement,
+                                      gpu_options=gpu_options)
 
         global_step = tf.Variable(0, name="global_step", trainable=False)
         # decay learning rate
@@ -382,12 +397,12 @@ def main(unused_args):
             train_op = optimizer.apply_gradients(grads_and_vars, name="train_op", global_step=global_step)
             session.run(tf.global_variables_initializer())
             # log hyperparameters to results file
-            with open(result_file_path, "a+") as f:
-                print("Writing hyperparameters into file")
-                f.write("Hidden layer size: %d \n" % (FLAGS.hidden_size))
-                f.write("Dropout rate: %.3f \n" % (FLAGS.keep_prob))
-                f.write("Batch size: %d \n" % (FLAGS.batch_size))
-                f.write("Max grad norm: %d \n" % (FLAGS.max_grad_norm))
+            # with open(result_file_path, "a+") as f:
+            #     print("Writing hyperparameters into file")
+            #     f.write("Hidden layer size: %d \n" % (FLAGS.hidden_size))
+            #     f.write("Dropout rate: %.3f \n" % (FLAGS.keep_prob))
+            #     f.write("Batch size: %d \n" % (FLAGS.batch_size))
+            #     f.write("Max grad norm: %d \n" % (FLAGS.max_grad_norm))
             # saver = tf.train.Saver(tf.all_variables())
             cs = []
             hs = []
@@ -413,9 +428,9 @@ def main(unused_args):
                 # if len(cs) < 1:
                 #     cs = c
                 # else 
-    cumulativeOutputMatrix = np.array(cumulativeOutputMatrix)
-    print cumulativeOutputMatrix.shape
-    np.save('hidden_state.npy', cumulativeOutputMatrix)
-    # np.savetxt(hidden_state_path, cumulativeOutputMatrix, delimiter=',',)
+    # cumulativeOutputMatrix = np.array(cumulativeOutputMatrix)
+    # print cumulativeOutputMatrix.shape
+    # np.save(hidden_state_path, cumulativeOutputMatrix)
+    
 if __name__ == "__main__":
     tf.app.run()

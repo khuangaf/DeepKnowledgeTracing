@@ -1,2 +1,0 @@
-Epoch: 2 Test Metrics:
- rmse: 0.461 	 auc: 0.635 	 r2: 0.053
