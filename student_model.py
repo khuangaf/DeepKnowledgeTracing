@@ -29,6 +29,7 @@ tf.flags.DEFINE_integer("hidden_layer_num", 1, "The number of hidden layers (Int
 tf.flags.DEFINE_integer("hidden_size", 200, "The number of hidden nodes (Integer)")
 tf.flags.DEFINE_integer("evaluation_interval", 5, "Evaluate and print results every x epochs")
 tf.flags.DEFINE_integer("batch_size", 32, "Batch size for training.")
+<<<<<<< HEAD
 tf.flags.DEFINE_integer("epochs", 30, "Number of epochs to train for.")
 tf.flags.DEFINE_boolean("allow_soft_placement", True, "Allow device soft device placement")
 tf.flags.DEFINE_boolean("log_device_placement", False, "Log placement of ops on devices")
@@ -42,6 +43,15 @@ currentOutputMatrix = []
 cumulativeOutputMatrix = []
 # log_file_path = '1layereda_slided.txt'
 # hidden_state_path = 'hidden_stateb2.npy'
+=======
+tf.flags.DEFINE_integer("epochs", 50, "Number of epochs to train for.")
+tf.flags.DEFINE_boolean("allow_soft_placement", True, "Allow device soft device placement")
+tf.flags.DEFINE_boolean("log_device_placement", False, "Log placement of ops on devices")
+tf.flags.DEFINE_string("train_data_path", 'data/0910_a_train.csv', "Path to the training dataset")
+tf.flags.DEFINE_string("test_data_path", 'data/0910_a_test.csv', "Path to the testing dataset")
+
+log_file_path = '1layereda.txt'
+>>>>>>> 9e75d80a9c3fb778e71ddbcb48e4da4399c1de54
 FLAGS = tf.flags.FLAGS
 FLAGS._parse_flags()
 log_file_path = FLAGS.train_data_path[5:-4] + '.txt'

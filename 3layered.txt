@@ -1,0 +1,42 @@
+Epoch: 1 Train Metrics:
+ rmse: 0.470 	 auc: 0.601 	 r2: 0.023 
+
+Epoch: 2 Train Metrics:
+ rmse: 0.467 	 auc: 0.614 	 r2: 0.037 
+
+Epoch: 3 Train Metrics:
+ rmse: 0.470 	 auc: 0.604 	 r2: 0.025 
+
+Epoch: 4 Train Metrics:
+ rmse: 0.476 	 auc: 0.591 	 r2: -0.003 
+
+Epoch: 5 Train Metrics:
+ rmse: 0.470 	 auc: 0.604 	 r2: 0.025 
+
+Save variables to disk
+**********
+Start to test model....
+Epoch: 5 Test Metrics:
+ rmse: 0.464 	 auc: 0.623 	 r2: 0.041
+**********
+^[[AEpoch: 6 Train Metrics:
+ rmse: 0.470 	 auc: 0.608 	 r2: 0.025 
+
+Epoch: 7 Train Metrics:
+ rmse: 0.471 	 auc: 0.607 	 r2: 0.018 
+
+Epoch: 8 Train Metrics:
+ rmse: 0.467 	 auc: 0.616 	 r2: 0.037 
+
+Epoch: 9 Train Metrics:
+ rmse: 0.470 	 auc: 0.608 	 r2: 0.024 
+
+Epoch: 10 Train Metrics:
+ rmse: 0.472 	 auc: 0.607 	 r2: 0.015 
+
+Save variables to disk
+**********
+Start to test model....
+Epoch: 10 Test Metrics:
+ rmse: 0.466 	 auc: 0.621 	 r2: 0.032
+**********
