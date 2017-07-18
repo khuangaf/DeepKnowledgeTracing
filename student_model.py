@@ -18,43 +18,40 @@ from sklearn.metrics import mean_squared_error
 from sklearn.metrics import r2_score
 from sklearn import metrics
 from math import sqrt
-
+import os
+os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
+os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 # flags
 tf.flags.DEFINE_float("epsilon", 0.1, "Epsilon value for Adam Optimizer.")
-tf.flags.DEFINE_float("l2_lambda", 0.3, "Lambda for l2 loss.")
 tf.flags.DEFINE_float("learning_rate", 0.1, "Learning rate")
 tf.flags.DEFINE_float("max_grad_norm", 20.0, "Clip gradients to this norm.")
-tf.flags.DEFINE_float("keep_prob", 0.6, "Keep probability for dropout")
+tf.flags.DEFINE_float("keep_prob", 0.3, "Keep probability for dropout")
 tf.flags.DEFINE_integer("hidden_layer_num", 1, "The number of hidden layers (Integer)")
 tf.flags.DEFINE_integer("hidden_size", 200, "The number of hidden nodes (Integer)")
 tf.flags.DEFINE_integer("evaluation_interval", 5, "Evaluate and print results every x epochs")
 tf.flags.DEFINE_integer("batch_size", 32, "Batch size for training.")
-<<<<<<< HEAD
 tf.flags.DEFINE_integer("epochs", 30, "Number of epochs to train for.")
 tf.flags.DEFINE_boolean("allow_soft_placement", True, "Allow device soft device placement")
 tf.flags.DEFINE_boolean("log_device_placement", False, "Log placement of ops on devices")
-tf.flags.DEFINE_string("train_data_path", 'data/kdd_train_0506_alg_modified.csv', "Path to the training dataset")
-tf.flags.DEFINE_string("test_data_path", 'data/kdd_test_0506_alg_modified.csv', "Path to the testing dataset")
-
-gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=    0.7)
+tf.flags.DEFINE_string("train_data_path", 'data/0910_b_train_modified.csv', "Path to the training dataset")
+tf.flags.DEFINE_string("test_data_path", 'data/0910_b_test_modified.csv', "Path to the testing dataset")
 
 
+gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=  0.2)
+# gpu_options = tf.GPUOptions(allow_growth= True)
+
+
+currentHiddenStateMatrix = []
+cumulativeHiddenStateMatrix = []
 currentOutputMatrix = []
 cumulativeOutputMatrix = []
 # log_file_path = '1layereda_slided.txt'
-# hidden_state_path = 'hidden_stateb2.npy'
-=======
-tf.flags.DEFINE_integer("epochs", 50, "Number of epochs to train for.")
-tf.flags.DEFINE_boolean("allow_soft_placement", True, "Allow device soft device placement")
-tf.flags.DEFINE_boolean("log_device_placement", False, "Log placement of ops on devices")
-tf.flags.DEFINE_string("train_data_path", 'data/0910_a_train.csv', "Path to the training dataset")
-tf.flags.DEFINE_string("test_data_path", 'data/0910_a_test.csv', "Path to the testing dataset")
-
-log_file_path = '1layereda.txt'
->>>>>>> 9e75d80a9c3fb778e71ddbcb48e4da4399c1de54
+hidden_state_path = 'hidden_stateb1.npy'
+output_path = 'outputb1.npy'
 FLAGS = tf.flags.FLAGS
 FLAGS._parse_flags()
-log_file_path = FLAGS.train_data_path[5:-4] + '.txt'
+# log_file_path = FLAGS.train_data_path[5:-4] + 'l2'  + '.txt'
+log_file_path = '0910_b_train_modified_0.3alll2.txt'
 hidden_state_path =FLAGS.train_data_path[5:-4] + str(FLAGS.hidden_layer_num) + '.npy'
 
 
@@ -64,8 +61,9 @@ for attr, value in sorted(FLAGS.__flags.items()):
     print("{}={}".format(attr.upper(), value))
 print("")
 
+# print log_file_path
 print log_file_path
-print hidden_state_path
+print output_path
 def add_gradient_noise(t, stddev=1e-3, name=None):
     """
     Adds gradient noise as described in http://arxiv.org/abs/1511.06807 [2].
@@ -149,11 +147,17 @@ class StudentModel(object):
 
         #logits [batch_size * num_steps, num_skills]
         logits = tf.matmul(output, sigmoid_w) + sigmoid_b
-        
+        self._last_logits = logits[(batch_size)*(num_steps-1):,:]
+        # print "-------------------"
+        # print self._last_logits.shape
+        # print "-------------------"
         # from output nodes to pick up the right one we want
         #logits: [batch_size * num_steps * num_skills]
         # logits are the output of the rnn after sigmoid
         logits = tf.reshape(logits, [-1])
+        lstm_weights = [v for v in tf.trainable_variables() if v.name == 'model/rnn/multi_rnn_cell/cell_0/basic_lstm_cell/weights:0']
+        lstm_weights = tf.reshape(lstm_weights, [-1])
+        
         #target_id = batch_num*m.num_steps*m.num_skills + skill_num*m.num_skills + int(problem_ids[j+1]))
         #selected_logits: shape of target_id
         selected_logits = tf.gather(logits, self.target_id)
@@ -163,6 +167,9 @@ class StudentModel(object):
 
         # loss function
         loss = tf.reduce_sum(tf.nn.sigmoid_cross_entropy_with_logits(logits = selected_logits,labels= target_correctness))
+        loss = tf.reduce_sum(loss + config.beta * tf.nn.l2_loss(lstm_weights))
+        loss = tf.reduce_sum(loss + config.beta * tf.nn.l2_loss(sigmoid_w))
+        # loss += 
 
         #self._cost = cost = tf.reduce_mean(loss)
         self._final_state = state
@@ -171,6 +178,11 @@ class StudentModel(object):
     @property
     def batch_size(self):
         return self._batch_size
+
+    @property
+    def last_logits(self):
+        return self._last_logits
+
 
     @property
     def input_data(self):
@@ -217,10 +229,13 @@ class HyperParamsConfig(object):
     keep_prob = FLAGS.keep_prob
     num_skills = 0
     state_size = [200]
+    beta = 0.01
 
 def run_epoch(session, m, students, eval_op, verbose=False):
     """Runs the model on the given data."""
     start_time = time.time()
+    global cumulativeHiddenStateMatrix
+    global currentHiddenStateMatrix
     global cumulativeOutputMatrix
     global currentOutputMatrix
     index = 0
@@ -249,37 +264,40 @@ def run_epoch(session, m, students, eval_op, verbose=False):
 
         
 
-        pred, _, final_state = session.run([m.pred, eval_op, m.final_state], feed_dict={
+        pred, _, final_state, last_logits, cost = session.run([m.pred, eval_op, m.final_state, m.last_logits, m.cost], feed_dict={
             m.input_data: x, m.target_id: target_id,
             m.target_correctness: target_correctness})
         #h: [batch_size, num_unit]
-
+        # print cost.shape
         h = final_state[0][1]
         for i in range(len(final_state)):
             if i == 0: continue
             h = np.concatenate((h,final_state[i][1]), axis=1)
         index += m.batch_size
         # if first batch of data
-        if len(currentOutputMatrix) < 1:
-            currentOutputMatrix = h
+        if len(currentHiddenStateMatrix) < 1:
+            currentHiddenStateMatrix = h
+            currentOutputMatrix = last_logits
         else:
-            currentOutputMatrix = np.concatenate((currentOutputMatrix, h), axis = 0)
+            currentHiddenStateMatrix = np.concatenate((currentHiddenStateMatrix, h), axis = 0)
+            currentOutputMatrix = np.concatenate((currentOutputMatrix, last_logits), axis= 0)
         # if last iteration in a epoch
         if index+m.batch_size >= len(students):
             # if first epoch
-            if len(cumulativeOutputMatrix) < 1:
+            if len(cumulativeHiddenStateMatrix) < 1:
+                cumulativeHiddenStateMatrix = currentHiddenStateMatrix
                 cumulativeOutputMatrix = currentOutputMatrix
             else:
-                # print cumulativeOutputMatrix.shape
-                # print currentOutputMatrix.shape
+                # print cumulativeHiddenStateMatrix.shape
+                # print currentHiddenStateMatrix.shape
                 #ignore test case
-                if np.array(cumulativeOutputMatrix).shape[0] == np.array(currentOutputMatrix).shape[0]:
-
-                    cumulativeOutputMatrix = np.concatenate((cumulativeOutputMatrix, currentOutputMatrix), axis= 1)
+                if np.array(cumulativeHiddenStateMatrix).shape[0] == np.array(currentHiddenStateMatrix).shape[0]:
+                    cumulativeOutputMatrix = np.concatenate((cumulativeOutputMatrix, currentOutputMatrix), axis = 1)
+                    cumulativeHiddenStateMatrix = np.concatenate((cumulativeHiddenStateMatrix, currentHiddenStateMatrix), axis= 1)
         # a new epoch
         if index < 1:            
+            currentHiddenStateMatrix = []
             currentOutputMatrix = []
-        
 
 
         for p in pred:
@@ -290,11 +308,12 @@ def run_epoch(session, m, students, eval_op, verbose=False):
     # print len(final_state)
     # print len(final_state[0])
 
-    # print len(currentOutputMatrix)
-    # print len(cumulativeOutputMatrix)
-    # print np.array(cumulativeOutputMatrix).shape
-    # print np.array(currentOutputMatrix).shape
+    # print len(currentHiddenStateMatrix)
+    # print len(cumulativeHiddenStateMatrix)
+    # print np.array(cumulativeHiddenStateMatrix).shape
+    # print np.array(currentHiddenStateMatrix).shape
     # reset current when finish a epoch
+    currentHiddenStateMatrix = []
     currentOutputMatrix = []
     # print final_state[0][0].shape
     rmse = sqrt(mean_squared_error(actual_labels, pred_labels))
@@ -357,6 +376,7 @@ def read_data_from_csv_file(fileName):
     return tuple_rows, max_num_problems, max_skill_num+1
 
 def main(unused_args):
+    global cumulativeHiddenStateMatrix
     global cumulativeOutputMatrix
     config = HyperParamsConfig()
     eval_config = HyperParamsConfig()
@@ -438,9 +458,12 @@ def main(unused_args):
                 # if len(cs) < 1:
                 #     cs = c
                 # else 
-    # cumulativeOutputMatrix = np.array(cumulativeOutputMatrix)
-    # print cumulativeOutputMatrix.shape
-    # np.save(hidden_state_path, cumulativeOutputMatrix)
+    cumulativeHiddenStateMatrix = np.array(cumulativeHiddenStateMatrix)
+    cumulativeOutputMatrix = np.array(cumulativeOutputMatrix)
+    print cumulativeHiddenStateMatrix.shape
+    print cumulativeOutputMatrix.shape
+    # np.save(hidden_state_path, cumulativeHiddenStateMatrix)
+    # np.save(output_path, cumulativeOutputMatrix)
     
 if __name__ == "__main__":
     tf.app.run()
