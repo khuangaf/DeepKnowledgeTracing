@@ -19,25 +19,26 @@ from sklearn.metrics import r2_score
 from sklearn import metrics
 from math import sqrt
 import os
+
 os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
-os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 # flags
 tf.flags.DEFINE_float("epsilon", 0.1, "Epsilon value for Adam Optimizer.")
 tf.flags.DEFINE_float("learning_rate", 0.1, "Learning rate")
 tf.flags.DEFINE_float("max_grad_norm", 20.0, "Clip gradients to this norm.")
-tf.flags.DEFINE_float("keep_prob", 0.3, "Keep probability for dropout")
+tf.flags.DEFINE_float("keep_prob", 0.6, "Keep probability for dropout")
 tf.flags.DEFINE_integer("hidden_layer_num", 1, "The number of hidden layers (Integer)")
 tf.flags.DEFINE_integer("hidden_size", 200, "The number of hidden nodes (Integer)")
 tf.flags.DEFINE_integer("evaluation_interval", 5, "Evaluate and print results every x epochs")
 tf.flags.DEFINE_integer("batch_size", 32, "Batch size for training.")
-tf.flags.DEFINE_integer("epochs", 30, "Number of epochs to train for.")
+tf.flags.DEFINE_integer("epochs", 1000, "Number of epochs to train for.")
 tf.flags.DEFINE_boolean("allow_soft_placement", True, "Allow device soft device placement")
 tf.flags.DEFINE_boolean("log_device_placement", False, "Log placement of ops on devices")
-tf.flags.DEFINE_string("train_data_path", 'data/0910_b_train_modified.csv', "Path to the training dataset")
-tf.flags.DEFINE_string("test_data_path", 'data/0910_b_test_modified.csv', "Path to the testing dataset")
+tf.flags.DEFINE_string("train_data_path", 'data/second_school_train_modified.csv', "Path to the training dataset")
+tf.flags.DEFINE_string("test_data_path", 'data/second_school_test_modified.csv', "Path to the testing dataset")
 
 
-gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=  0.2)
+gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=  0.3)
 # gpu_options = tf.GPUOptions(allow_growth= True)
 
 
@@ -51,7 +52,7 @@ output_path = 'outputb1.npy'
 FLAGS = tf.flags.FLAGS
 FLAGS._parse_flags()
 # log_file_path = FLAGS.train_data_path[5:-4] + 'l2'  + '.txt'
-log_file_path = '0910_b_train_modified_0.3alll2.txt'
+log_file_path = 'second_school_assis_modified_1l2.txt'
 hidden_state_path =FLAGS.train_data_path[5:-4] + str(FLAGS.hidden_layer_num) + '.npy'
 
 
@@ -70,8 +71,9 @@ def add_gradient_noise(t, stddev=1e-3, name=None):
     The input Tensor `t` should be a gradient.
     The output will be `t` + gaussian noise.
     0.001 was said to be a good fixed value for memory networks [2].
+    tf.op_scope(values, name, default_name) is deprecated, use tf.name_scope(name, default_name, values)
     """
-    with tf.op_scope([t, stddev], name, "add_gradient_noise") as name:
+    with tf.name_scope( name, "add_gradient_noise",[t, stddev]) as name:
         t = tf.convert_to_tensor(t, name="t")
         gn = tf.random_normal(tf.shape(t), stddev=stddev)
         return tf.add(t, gn, name=name)
@@ -156,7 +158,7 @@ class StudentModel(object):
         # logits are the output of the rnn after sigmoid
         logits = tf.reshape(logits, [-1])
         lstm_weights = [v for v in tf.trainable_variables() if v.name == 'model/rnn/multi_rnn_cell/cell_0/basic_lstm_cell/weights:0']
-        lstm_weights = tf.reshape(lstm_weights, [-1])
+        # lstm_weights = tf.reshape(lstm_weights, [-1])
         
         #target_id = batch_num*m.num_steps*m.num_skills + skill_num*m.num_skills + int(problem_ids[j+1]))
         #selected_logits: shape of target_id
@@ -167,7 +169,7 @@ class StudentModel(object):
 
         # loss function
         loss = tf.reduce_sum(tf.nn.sigmoid_cross_entropy_with_logits(logits = selected_logits,labels= target_correctness))
-        loss = tf.reduce_sum(loss + config.beta * tf.nn.l2_loss(lstm_weights))
+        # loss = tf.reduce_sum(loss + config.beta * tf.norm(lstm_weights))
         loss = tf.reduce_sum(loss + config.beta * tf.nn.l2_loss(sigmoid_w))
         # loss += 
 
@@ -229,7 +231,7 @@ class HyperParamsConfig(object):
     keep_prob = FLAGS.keep_prob
     num_skills = 0
     state_size = [200]
-    beta = 0.01
+    beta = 1
 
 def run_epoch(session, m, students, eval_op, verbose=False):
     """Runs the model on the given data."""
