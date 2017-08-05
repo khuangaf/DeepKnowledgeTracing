@@ -19,23 +19,26 @@ from sklearn.metrics import r2_score
 from sklearn import metrics
 from math import sqrt
 import os
-
+import pandas as pd
 os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 # flags
 tf.flags.DEFINE_float("epsilon", 0.1, "Epsilon value for Adam Optimizer.")
 tf.flags.DEFINE_float("learning_rate", 0.1, "Learning rate")
 tf.flags.DEFINE_float("max_grad_norm", 20.0, "Clip gradients to this norm.")
-tf.flags.DEFINE_float("keep_prob", 0.6, "Keep probability for dropout")
+tf.flags.DEFINE_float("keep_prob", 0.3, "Keep probability for dropout")
 tf.flags.DEFINE_integer("hidden_layer_num", 1, "The number of hidden layers (Integer)")
 tf.flags.DEFINE_integer("hidden_size", 200, "The number of hidden nodes (Integer)")
+tf.flags.DEFINE_integer("preprocess_size", 200, "The number of preprocess nodes after one-hot (Integer)")
+tf.flags.DEFINE_integer("embedding_size", 300, "The number of nodes for word embedding (Integer)")
 tf.flags.DEFINE_integer("evaluation_interval", 5, "Evaluate and print results every x epochs")
 tf.flags.DEFINE_integer("batch_size", 32, "Batch size for training.")
-tf.flags.DEFINE_integer("epochs", 1000, "Number of epochs to train for.")
+tf.flags.DEFINE_integer("epochs", 100, "Number of epochs to train for.")
 tf.flags.DEFINE_boolean("allow_soft_placement", True, "Allow device soft device placement")
 tf.flags.DEFINE_boolean("log_device_placement", False, "Log placement of ops on devices")
-tf.flags.DEFINE_string("train_data_path", 'data/second_school_train_modified.csv', "Path to the training dataset")
-tf.flags.DEFINE_string("test_data_path", 'data/second_school_test_modified.csv', "Path to the testing dataset")
+tf.flags.DEFINE_string("train_data_path", 'data/2012_assist_train.csv', "Path to the training dataset")
+tf.flags.DEFINE_string("test_data_path", 'data/2012_assist_test.csv', "Path to the testing dataset")
+
 
 
 gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=  0.3)
@@ -52,7 +55,7 @@ output_path = 'outputb1.npy'
 FLAGS = tf.flags.FLAGS
 FLAGS._parse_flags()
 # log_file_path = FLAGS.train_data_path[5:-4] + 'l2'  + '.txt'
-log_file_path = 'second_school_assis_modified_1l2.txt'
+log_file_path = '2012_assist_preprocessed_context_1_layer_more0.3_autoencoder.txt'
 hidden_state_path =FLAGS.train_data_path[5:-4] + str(FLAGS.hidden_layer_num) + '.npy'
 
 
@@ -65,6 +68,20 @@ print("")
 # print log_file_path
 print log_file_path
 print output_path
+
+context_df = pd.DataFrame(columns=['problem_ids','problem_vectors'])
+
+# context_problems_vectors=None
+def load_context():
+    global context_df
+    context_df['problem_vectors'] = list(np.load('data/body2vec_autoencoder.npy'))
+
+    df= pd.read_csv('data/ASSISTmentsProblems.csv')
+    context_df['problem_ids'] = list(df.loc[:,'problem_id'].astype(np.int32))
+
+#load context into a dataframe
+load_context()
+
 def add_gradient_noise(t, stddev=1e-3, name=None):
     """
     Adds gradient noise as described in http://arxiv.org/abs/1511.06807 [2].
@@ -88,14 +105,16 @@ class StudentModel(object):
         self.hidden_size = size = FLAGS.hidden_size
         self.num_steps = num_steps = config.num_steps
         input_size = num_skills*2
-
+        preprocess_size = FLAGS.preprocess_size
+        embedding_size = FLAGS.embedding_size
         inputs = self._input_data = tf.placeholder(tf.int32, [batch_size, num_steps])
         self._target_id = target_id = tf.placeholder(tf.int32, [None])
+        input_vectors = self._input_vector = tf.placeholder(tf.float32, [batch_size,num_steps , embedding_size ])
         self._target_correctness = target_correctness = tf.placeholder(tf.float32, [None])
         final_hidden_size = self.state_size[-1]
 
         hidden_layers = []
-        
+        # input_vectors = tf.reshape(input_vectors, [batch_size,num_steps ,preprocess_size ])
         for i in range(self.hidden_layer_num):
             
             hidden1 = tf.contrib.rnn.BasicLSTMCell(self.state_size[i], state_is_tuple=True,reuse=tf.get_variable_scope().reuse)
@@ -124,8 +143,21 @@ class StudentModel(object):
             inputs.set_shape([batch_size*num_steps, input_size])
 
         # [batch_size, num_steps, input_size]
-        inputs = tf.reshape(inputs, [-1, num_steps, input_size])
-        x = inputs
+        
+        preprocess_w = tf.get_variable('preprocess_w', [ input_size, preprocess_size])
+        preprocess_b = tf.get_variable('preprocess_b', [ preprocess_size])
+        inputs = tf.reshape(inputs, [-1, input_size])
+        inputs = tf.matmul(inputs, preprocess_w) + preprocess_b
+        inputs = tf.reshape(inputs, [-1, num_steps, preprocess_size])
+
+
+        embedding_w = tf.get_variable('embedding_w', [ embedding_size, preprocess_size])
+        embedding_b = tf.get_variable('embedding_b', [ preprocess_size])
+        input_vectors = tf.reshape(input_vectors,[-1, embedding_size])
+        input_vectors = tf.matmul(input_vectors, embedding_w) + embedding_b
+        input_vectors = tf.reshape(input_vectors, [-1, num_steps, preprocess_size])
+
+        x = tf.concat([inputs, input_vectors],2)
         # x = tf.transpose(inputs, [1, 0, 2])
         # # Reshape to (n_steps*batch_size, n_input)
         # x = tf.reshape(x, [-1, input_size])
@@ -170,7 +202,7 @@ class StudentModel(object):
         # loss function
         loss = tf.reduce_sum(tf.nn.sigmoid_cross_entropy_with_logits(logits = selected_logits,labels= target_correctness))
         # loss = tf.reduce_sum(loss + config.beta * tf.norm(lstm_weights))
-        loss = tf.reduce_sum(loss + config.beta * tf.nn.l2_loss(sigmoid_w))
+        # loss = tf.reduce_sum(loss + config.beta * tf.nn.l2_loss(sigmoid_w))
         # loss += 
 
         #self._cost = cost = tf.reduce_mean(loss)
@@ -189,6 +221,10 @@ class StudentModel(object):
     @property
     def input_data(self):
         return self._input_data
+
+    @property
+    def input_vector(self):
+        return self._input_vector
 
     @property
     def auc(self):
@@ -240,66 +276,79 @@ def run_epoch(session, m, students, eval_op, verbose=False):
     global currentHiddenStateMatrix
     global cumulativeOutputMatrix
     global currentOutputMatrix
+    global context_df
     index = 0
     pred_labels = []
     actual_labels = []
+
     while(index+m.batch_size < len(students)):
         x = np.zeros((m.batch_size, m.num_steps))
         target_id = []
         target_correctness = []
+        problem_context = np.zeros((m.batch_size, m.num_steps, FLAGS.embedding_size))
         count = 0
         for i in range(m.batch_size):
             student = students[index+i]
             problem_ids = student[1]
-            correctness = student[2]
-            for j in range(len(problem_ids)-1):
+            skill_ids = student[2]
+            correctness = student[3]
+            for j in range(len(skill_ids)-1):
+                skill_id = int(skill_ids[j])
                 problem_id = int(problem_ids[j])
+                context = context_df.loc[context_df['problem_ids'] == problem_id, 'problem_vectors'].iloc[0]
+                # print context
                 label_index = 0
                 if(int(correctness[j]) == 0):
-                    label_index = problem_id
+                    label_index = skill_id
                 else:
-                    label_index = problem_id + m.num_skills
+                    label_index = skill_id + m.num_skills
                 x[i, j] = label_index
-                target_id.append(i*m.num_steps*m.num_skills+j*m.num_skills+int(problem_ids[j+1]))
+                
+                problem_context[i,j] = context
+                target_id.append(i*m.num_steps*m.num_skills+j*m.num_skills+int(skill_ids[j+1]))
                 target_correctness.append(int(correctness[j+1]))
                 actual_labels.append(int(correctness[j+1]))
+                # problem_context.append(context)
 
-        
-
+        # print "--------------"
+        # print len(skill_ids)-1
+        # print m.batch_size
+        # print np.array(problem_context).shape
+        # print np.array(target_correctness).shape
         pred, _, final_state, last_logits, cost = session.run([m.pred, eval_op, m.final_state, m.last_logits, m.cost], feed_dict={
             m.input_data: x, m.target_id: target_id,
-            m.target_correctness: target_correctness})
+            m.target_correctness: target_correctness, m.input_vector : problem_context})
         #h: [batch_size, num_unit]
         # print cost.shape
-        h = final_state[0][1]
-        for i in range(len(final_state)):
-            if i == 0: continue
-            h = np.concatenate((h,final_state[i][1]), axis=1)
+        # h = final_state[0][1]
+        # for i in range(len(final_state)):
+        #     if i == 0: continue
+            # h = np.concatenate((h,final_state[i][1]), axis=1)
         index += m.batch_size
         # if first batch of data
-        if len(currentHiddenStateMatrix) < 1:
-            currentHiddenStateMatrix = h
-            currentOutputMatrix = last_logits
-        else:
-            currentHiddenStateMatrix = np.concatenate((currentHiddenStateMatrix, h), axis = 0)
-            currentOutputMatrix = np.concatenate((currentOutputMatrix, last_logits), axis= 0)
-        # if last iteration in a epoch
-        if index+m.batch_size >= len(students):
-            # if first epoch
-            if len(cumulativeHiddenStateMatrix) < 1:
-                cumulativeHiddenStateMatrix = currentHiddenStateMatrix
-                cumulativeOutputMatrix = currentOutputMatrix
-            else:
-                # print cumulativeHiddenStateMatrix.shape
-                # print currentHiddenStateMatrix.shape
-                #ignore test case
-                if np.array(cumulativeHiddenStateMatrix).shape[0] == np.array(currentHiddenStateMatrix).shape[0]:
-                    cumulativeOutputMatrix = np.concatenate((cumulativeOutputMatrix, currentOutputMatrix), axis = 1)
-                    cumulativeHiddenStateMatrix = np.concatenate((cumulativeHiddenStateMatrix, currentHiddenStateMatrix), axis= 1)
-        # a new epoch
-        if index < 1:            
-            currentHiddenStateMatrix = []
-            currentOutputMatrix = []
+        # if len(currentHiddenStateMatrix) < 1:
+        #     currentHiddenStateMatrix = h
+        #     currentOutputMatrix = last_logits
+        # else:
+        #     currentHiddenStateMatrix = np.concatenate((currentHiddenStateMatrix, h), axis = 0)
+        #     currentOutputMatrix = np.concatenate((currentOutputMatrix, last_logits), axis= 0)
+        # # if last iteration in a epoch
+        # if index+m.batch_size >= len(students):
+        #     # if first epoch
+        #     if len(cumulativeHiddenStateMatrix) < 1:
+        #         cumulativeHiddenStateMatrix = currentHiddenStateMatrix
+        #         cumulativeOutputMatrix = currentOutputMatrix
+        #     else:
+        #         # print cumulativeHiddenStateMatrix.shape
+        #         # print currentHiddenStateMatrix.shape
+        #         #ignore test case
+        #         if np.array(cumulativeHiddenStateMatrix).shape[0] == np.array(currentHiddenStateMatrix).shape[0]:
+        #             cumulativeOutputMatrix = np.concatenate((cumulativeOutputMatrix, currentOutputMatrix), axis = 1)
+        #             cumulativeHiddenStateMatrix = np.concatenate((cumulativeHiddenStateMatrix, currentHiddenStateMatrix), axis= 1)
+        # # a new epoch
+        # if index < 1:            
+        #     currentHiddenStateMatrix = []
+        #     currentOutputMatrix = []
 
 
         for p in pred:
@@ -348,34 +397,34 @@ def read_data_from_csv_file(fileName):
 
     while(index < len(rows)-1):
         problems_num = int(rows[index][0])
-
-        secondRow =  rows[index+1]
-        thirdRow = rows[index+2]
+        problem_ids = rows[index+1]
+        secondRow =  rows[index+2]
+        thirdRow = rows[index+3]
         # if index == 0:
         #     print secondRow
         #     print thirdRow
         if len(secondRow) <1:
-            index+=3
+            index+=4
             continue
         tmp_max_skill = max(map(int, secondRow))
         if(tmp_max_skill > max_skill_num):
             max_skill_num = tmp_max_skill
         if(problems_num <= 2):
-            index += 3
+            index += 4
         else:
             if problems_num > max_num_problems:
                 max_num_problems = problems_num
-            tup = (rows[index], secondRow, thirdRow)
+            tup = (rows[index], problem_ids, secondRow, thirdRow)
             tuple_rows.append(tup)
             problems.append(problems_num)
-            index += 3
+            index += 4
     # print problems
     #shuffle the tuple
 
     random.shuffle(tuple_rows)
     print "The number of students is ", len(tuple_rows)
     print "Finish reading data"
-    return tuple_rows, max_num_problems, max_skill_num+1
+    return tuple_rows, max_num_problems, max_skill_num+1, 
 
 def main(unused_args):
     global cumulativeHiddenStateMatrix
